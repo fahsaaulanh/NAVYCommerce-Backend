@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C5BADFC4-8180-4CA9-8B7C-87B66F4B6D2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAVYCommerce.Domain", "src\NAVYCommerce.Domain\NAVYCommerce.Domain.csproj", "{A375CBEC-8B39-4767-B210-4122488DA330}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAVYCommerce.Application", "src\NAVYCommerce.Application\NAVYCommerce.Application.csproj", "{D5973679-791B-411B-B691-F55169F8C078}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAVYCommerce.Infrastructure", "src\NAVYCommerce.Infrastructure\NAVYCommerce.Infrastructure.csproj", "{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAVYCommerce.API", "src\NAVYCommerce.API\NAVYCommerce.API.csproj", "{19B14435-D087-48D6-B9EE-8A9A93D9254F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A375CBEC-8B39-4767-B210-4122488DA330}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A375CBEC-8B39-4767-B210-4122488DA330}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A375CBEC-8B39-4767-B210-4122488DA330}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A375CBEC-8B39-4767-B210-4122488DA330}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5973679-791B-411B-B691-F55169F8C078}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5973679-791B-411B-B691-F55169F8C078}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5973679-791B-411B-B691-F55169F8C078}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5973679-791B-411B-B691-F55169F8C078}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19B14435-D087-48D6-B9EE-8A9A93D9254F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19B14435-D087-48D6-B9EE-8A9A93D9254F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19B14435-D087-48D6-B9EE-8A9A93D9254F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19B14435-D087-48D6-B9EE-8A9A93D9254F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A375CBEC-8B39-4767-B210-4122488DA330} = {C5BADFC4-8180-4CA9-8B7C-87B66F4B6D2E}
+		{D5973679-791B-411B-B691-F55169F8C078} = {C5BADFC4-8180-4CA9-8B7C-87B66F4B6D2E}
+		{16C1A42D-F7AB-4A94-A548-CE0DB8F5AB56} = {C5BADFC4-8180-4CA9-8B7C-87B66F4B6D2E}
+		{19B14435-D087-48D6-B9EE-8A9A93D9254F} = {C5BADFC4-8180-4CA9-8B7C-87B66F4B6D2E}
+	EndGlobalSection
+EndGlobal
