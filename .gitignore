@@ -1,0 +1,28 @@
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+TestResults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Konfigurasi lokal
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+appsettings*.json
+!appsettings.Example.json
+
+# Sertifikat dan private key
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Sistem operasi
+.DS_Store
+Thumbs.db
