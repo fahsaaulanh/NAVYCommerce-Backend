@@ -14,6 +14,7 @@ namespace NAVYCommerce.Domain.Entities
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Category? Category { get; set; }
+    public Store Store { get; set; } = null!;
     public Dictionary<string, List<string>> VariantOptions { get; set; } = new();
     public ICollection<ProductVariant> Variants { get; set; } = new List<ProductVariant>();
 

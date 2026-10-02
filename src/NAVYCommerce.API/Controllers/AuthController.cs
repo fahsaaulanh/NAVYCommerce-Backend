@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NAVYCommerce.Domain.Entities;
 using NAVYCommerce.Infrastructure.Data;
+using NAVYCommerce.API.Contracts.Auth;
+using NAVYCommerce.API.Services;
+using Npgsql;
 
 namespace NAVYCommerce.API.Controllers
 {
@@ -15,55 +18,99 @@ namespace NAVYCommerce.API.Controllers
   {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
-    public AuthController(ApplicationDbContext context, IConfiguration configuration)
+    private readonly IRegistrationOtpService _registrationOtpService;
+    private readonly IWebHostEnvironment _environment;
+    public AuthController(ApplicationDbContext context,
+    IConfiguration configuration,
+    IRegistrationOtpService registrationOtpService,
+    IWebHostEnvironment environment)
     {
       _context = context;
       _configuration = configuration;
+      _registrationOtpService = registrationOtpService;
+      _environment = environment;
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    public async Task<IActionResult> Register(
+    [FromBody] RegisterRequest request,
+    CancellationToken cancellationToken)
     {
-      var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+      var existingUser = await _context.Users
+          .AsNoTracking()
+          .FirstOrDefaultAsync(
+              user => user.Email == request.Email,
+              cancellationToken);
 
       if (existingUser != null)
       {
-        return BadRequest(new
+        if (!existingUser.IsVerified)
         {
-          message = "Email is already registered."
+          return Conflict(new
+          {
+            code = "AUTH_VERIFICATION_REQUIRED",
+            message =
+                  "Email sudah terdaftar tetapi belum terverifikasi. " +
+                  "Silakan meminta OTP baru."
+          });
+        }
+
+        return Conflict(new
+        {
+          code = "AUTH_EMAIL_ALREADY_REGISTERED",
+          message = "Email sudah terdaftar. Silakan login."
         });
       }
-
-      var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
       var newUser = new User
       {
         Email = request.Email,
-        PasswordHash = passwordHash,
-        FullName = request.FullName,
-        PhoneNumber = request.PhoneNumber,
-        Role = request.Role,
-        IsVerified = false,
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(
+              request.Password),
+        FullName = request.FullName.Trim(),
+        PhoneNumber = string.IsNullOrWhiteSpace(
+              request.PhoneNumber)
+                  ? null
+                  : request.PhoneNumber.Trim(),
+        Role = request.Role!.Value,
+        IsVerified = false
       };
+
+      var otp = _registrationOtpService
+          .CreateRegistrationOtp(newUser.Id);
 
       _context.Users.Add(newUser);
+      _context.UserOtps.Add(otp);
 
-      var random = new Random();
-      var otpCode = random.Next(100000, 999999).ToString();
-
-      var userOtp = new UserOtp
+      try
       {
-        UserId = newUser.Id,
-        OtpCode = otpCode,
-        Type = OtpType.Register,
-        ExpiresAt = DateTime.UtcNow.AddMinutes(5),
-        IsUsed = false,
-      };
+        await _context.SaveChangesAsync(cancellationToken);
+      }
+      catch (DbUpdateException exception)
+          when (exception.InnerException is PostgresException
+          {
+            SqlState: "23505",
+            ConstraintName: "IX_users_Email"
+          })
+      {
+        return Conflict(new
+        {
+          code = "AUTH_EMAIL_ALREADY_REGISTERED",
+          message =
+                "Email sudah terdaftar. Silakan login atau lanjutkan verifikasi."
+        });
+      }
 
-      _context.UserOtps.Add(userOtp);
-
-      await _context.SaveChangesAsync();
-      return Ok(new { Message = "User registered successfully. Please verify your email.", MockEmailInbox = $"Your OTP code is: {otpCode}" });
+      return Ok(new
+      {
+        code = "AUTH_REGISTRATION_PENDING",
+        message =
+              "Registrasi berhasil. Silakan verifikasi email.",
+        expiresAt = otp.ExpiresAt,
+        mockEmailInbox = _environment.IsDevelopment()
+              ? $"Your OTP code is: {otp.OtpCode}"
+              : null
+      });
     }
 
     [HttpPost("verify-otp")]
@@ -175,26 +222,69 @@ namespace NAVYCommerce.API.Controllers
         Role = user.Role.ToString(),
       });
     }
-  }
 
-  public class RegisterRequest
-  {
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string PhoneNumber { get; set; } = string.Empty;
-    public UserRole Role { get; set; }
-  }
 
-  public class VerifyOtpRequest
-  {
-    public string Email { get; set; } = string.Empty;
-    public string OtpCode { get; set; } = string.Empty;
-  }
+    [HttpPost("resend-otp")]
+    public async Task<IActionResult> ResendOtp(
+      [FromBody] ResendOtpRequest request,
+      CancellationToken cancellationToken)
+    {
+      var result = await _registrationOtpService.ResendAsync(
+          request.Email,
+          cancellationToken);
 
-  public class LoginRequest
-  {
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
+      switch (result.Status)
+      {
+        case RegistrationOtpStatus.Sent:
+          return Ok(new
+          {
+            code = "AUTH_OTP_SENT",
+            message = "Kode verifikasi baru telah diterbitkan.",
+            expiresAt = result.ExpiresAt,
+
+            mockEmailInbox = _environment.IsDevelopment()
+                  ? $"Your OTP code is: {result.OtpCode}"
+                  : null
+          });
+
+        case RegistrationOtpStatus.Cooldown:
+          Response.Headers["Retry-After"] =
+              result.RetryAfterSeconds!.Value.ToString();
+
+          return StatusCode(429, new
+          {
+            code = "AUTH_OTP_COOLDOWN",
+            message = "Tunggu sebelum meminta kode baru.",
+            retryAfterSeconds = result.RetryAfterSeconds
+          });
+
+        case RegistrationOtpStatus.AlreadyVerified:
+          return Conflict(new
+          {
+            code = "AUTH_ALREADY_VERIFIED",
+            message = "Akun sudah terverifikasi. Silakan login."
+          });
+
+        case RegistrationOtpStatus.UserNotFound:
+          return NotFound(new
+          {
+            code = "AUTH_USER_NOT_FOUND",
+            message = "Akun belum terdaftar."
+          });
+
+        case RegistrationOtpStatus.AttemptsExceeded:
+          return BadRequest(new
+          {
+            code = "AUTH_OTP_ATTEMPTS_EXCEEDED",
+            message =
+                  "Batas percobaan OTP tercapai. Silakan meminta kode baru."
+          });
+
+        default:
+          throw new InvalidOperationException(
+              "Hasil penerbitan OTP tidak dikenali.");
+      }
+    }
+
   }
 }

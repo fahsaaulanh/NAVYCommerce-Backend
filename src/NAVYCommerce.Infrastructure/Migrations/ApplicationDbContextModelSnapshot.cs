@@ -21,8 +21,34 @@ namespace NAVYCommerce.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "8.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "hstore");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("categories", (string)null);
+                });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
@@ -65,8 +91,12 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("Slug")
                         .IsUnique();
+
+                    b.HasIndex("StoreId");
 
                     b.ToTable("products", (string)null);
                 });
@@ -90,15 +120,54 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Property<int>("StockQuantity")
                         .HasColumnType("integer");
 
-                    b.Property<Dictionary<string, string>>("VariantAtributes")
+                    b.Property<Dictionary<string, string>>("VariantAttributes")
                         .IsRequired()
-                        .HasColumnType("hstore");
+                        .HasColumnType("jsonb");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductId");
 
+                    b.HasIndex("Sku")
+                        .IsUnique();
+
                     b.ToTable("product_variants", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("stores", (string)null);
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>
@@ -155,6 +224,11 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("FailedAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("IsUsed")
                         .HasColumnType("boolean");
 
@@ -176,6 +250,25 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("user_otps", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.Category", "Category")
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NAVYCommerce.Domain.Entities.Store", "Store")
+                        .WithMany("Products")
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Store");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariant", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.Product", "Product")
@@ -185,6 +278,17 @@ namespace NAVYCommerce.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.User", "Owner")
+                        .WithMany("Stores")
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.UserOtp", b =>
@@ -198,14 +302,26 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
                     b.Navigation("Variants");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>
                 {
                     b.Navigation("Otps");
+
+                    b.Navigation("Stores");
                 });
 #pragma warning restore 612, 618
         }

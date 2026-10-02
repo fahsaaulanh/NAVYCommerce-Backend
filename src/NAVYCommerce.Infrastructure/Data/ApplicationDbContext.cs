@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NAVYCommerce.Domain.Entities;
+using NAVYCommerce.Infrastructure.Data.Configurations;
 
 
 namespace NAVYCommerce.Infrastructure.Data
@@ -12,10 +13,12 @@ namespace NAVYCommerce.Infrastructure.Data
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<Store> Stores => Set<Store>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
+      modelBuilder.ApplyConfiguration(new StoreConfiguration());
 
       modelBuilder.Entity<User>().ToTable("users");
       modelBuilder.Entity<UserOtp>().ToTable("user_otps");
@@ -32,15 +35,18 @@ namespace NAVYCommerce.Infrastructure.Data
       });
 
       modelBuilder.Entity<UserOtp>(entity =>
-            {
-              entity.HasKey(e => e.Id);
-              entity.Property(e => e.Type).HasConversion<string>();
+        {
+          entity.HasKey(e => e.Id);
+          entity.Property(e => e.Type).HasConversion<string>();
 
-              entity.HasOne(o => o.User)
-                    .WithMany(u => u.Otps)
-                    .HasForeignKey(o => o.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
+          entity.HasOne(o => o.User)
+                .WithMany(u => u.Otps)
+                .HasForeignKey(o => o.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+          entity.Property(otp => otp.FailedAttempts)
+                .HasDefaultValue(0);
+        });
 
       modelBuilder.Entity<Category>(entity =>
       {
