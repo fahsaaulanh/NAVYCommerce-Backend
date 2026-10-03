@@ -20,7 +20,12 @@ namespace NAVYCommerce.Infrastructure.Data
       base.OnModelCreating(modelBuilder);
       modelBuilder.ApplyConfiguration(new StoreConfiguration());
 
-      modelBuilder.Entity<User>().ToTable("users");
+      modelBuilder.Entity<User>().ToTable("users", table =>
+      {
+        table.HasCheckConstraint(
+            "CK_users_Email_Normalized",
+            "\"Email\" = lower(btrim(\"Email\"))");
+      });
       modelBuilder.Entity<UserOtp>().ToTable("user_otps");
       modelBuilder.Entity<Category>().ToTable("categories");
       modelBuilder.Entity<Product>().ToTable("products");

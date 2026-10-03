@@ -209,7 +209,10 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("users", (string)null);
+                    b.ToTable("users", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_users_Email_Normalized", "\"Email\" = lower(btrim(\"Email\"))");
+                        });
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.UserOtp", b =>

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NAVYCommerce.Domain.Entities;
 using NAVYCommerce.Infrastructure.Data;
+using NAVYCommerce.API.Helpers;
 
 namespace NAVYCommerce.API.Services
 {
@@ -234,11 +235,12 @@ namespace NAVYCommerce.API.Services
         string email,
         CancellationToken cancellationToken)
     {
+      var normalizedEmail = EmailNormalizer.Normalize(email);
       return _context.Users
           .FromSqlInterpolated($@"
                     SELECT *
                     FROM users
-                    WHERE ""Email"" = {email}
+                    WHERE ""Email"" = {normalizedEmail}
                     FOR UPDATE")
           .SingleOrDefaultAsync(cancellationToken);
     }

@@ -9,7 +9,7 @@ using NAVYCommerce.Infrastructure.Data;
 using NAVYCommerce.API.Contracts.Auth;
 using NAVYCommerce.API.Services;
 using Npgsql;
-
+using NAVYCommerce.API.Helpers;
 namespace NAVYCommerce.API.Controllers
 {
   [Route("api/[controller]")]
@@ -36,10 +36,11 @@ namespace NAVYCommerce.API.Controllers
     [FromBody] RegisterRequest request,
     CancellationToken cancellationToken)
     {
+      var normalizedEmail = EmailNormalizer.Normalize(request.Email);
       var existingUser = await _context.Users
           .AsNoTracking()
           .FirstOrDefaultAsync(
-              user => user.Email == request.Email,
+              user => user.Email == normalizedEmail,
               cancellationToken);
 
       if (existingUser != null)
@@ -64,7 +65,7 @@ namespace NAVYCommerce.API.Controllers
 
       var newUser = new User
       {
-        Email = request.Email,
+        Email = normalizedEmail,
         PasswordHash = BCrypt.Net.BCrypt.HashPassword(
               request.Password),
         FullName = request.FullName.Trim(),
@@ -167,7 +168,8 @@ namespace NAVYCommerce.API.Controllers
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-      var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+      var normalizedEmail = EmailNormalizer.Normalize(request.Email);
+      var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
       if (user == null)
       {
