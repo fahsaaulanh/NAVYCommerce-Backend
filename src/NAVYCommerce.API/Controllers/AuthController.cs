@@ -115,54 +115,64 @@ namespace NAVYCommerce.API.Controllers
     }
 
     [HttpPost("verify-otp")]
-    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+    public async Task<IActionResult> VerifyOtp(
+    [FromBody] VerifyOtpRequest request,
+    CancellationToken cancellationToken)
     {
-      var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-      if (user == null)
+      var result = await _registrationOtpService.VerifyAsync(
+          request.Email,
+          request.OtpCode,
+          cancellationToken);
+
+      switch (result.Status)
       {
-        return NotFound(new
-        {
-          message = "User not found."
-        });
+        case RegistrationOtpStatus.Verified:
+          return Ok(new
+          {
+            code = "AUTH_EMAIL_VERIFIED",
+            message = "Email berhasil diverifikasi. Silakan login."
+          });
+
+        case RegistrationOtpStatus.Expired:
+          return BadRequest(new
+          {
+            code = "AUTH_OTP_EXPIRED",
+            message = "OTP kedaluwarsa. Silakan meminta kode baru."
+          });
+
+        case RegistrationOtpStatus.InvalidCode:
+          return BadRequest(new
+          {
+            code = "AUTH_OTP_INVALID",
+            message = "OTP tidak valid atau sudah tidak berlaku."
+          });
+
+        case RegistrationOtpStatus.AttemptsExceeded:
+          return BadRequest(new
+          {
+            code = "AUTH_OTP_ATTEMPTS_EXCEEDED",
+            message =
+                  "Batas percobaan OTP tercapai. Silakan meminta kode baru."
+          });
+
+        case RegistrationOtpStatus.AlreadyVerified:
+          return Conflict(new
+          {
+            code = "AUTH_ALREADY_VERIFIED",
+            message = "Akun sudah terverifikasi. Silakan login."
+          });
+
+        case RegistrationOtpStatus.UserNotFound:
+          return NotFound(new
+          {
+            code = "AUTH_USER_NOT_FOUND",
+            message = "Akun belum terdaftar."
+          });
+
+        default:
+          throw new InvalidOperationException(
+              "Hasil verifikasi OTP tidak dikenali.");
       }
-
-      var validOtp = await _context.UserOtps
-      .Where(o => o.UserId == user.Id && o.OtpCode == request.OtpCode && o.Type == OtpType.Register)
-      .OrderByDescending(o => o.CreatedAt)
-      .FirstOrDefaultAsync();
-
-      if (validOtp == null)
-      {
-        return BadRequest(new
-        {
-          messag = "Invalid OTP code."
-        });
-      }
-
-      if (validOtp.IsUsed)
-      {
-        return BadRequest(new
-        {
-          message = "This OTP code has already been used."
-        });
-      }
-
-      if (validOtp.ExpiresAt < DateTime.UtcNow)
-      {
-        return BadRequest(new
-        {
-          message = "This OTP code has expired."
-        });
-      }
-
-      user.IsVerified = true;
-      validOtp.IsUsed = true;
-
-      await _context.SaveChangesAsync();
-      return Ok(new
-      {
-        message = "Email verified successfully."
-      });
     }
 
     [HttpPost("login")]
@@ -197,7 +207,7 @@ namespace NAVYCommerce.API.Controllers
       }
 
       var tokenHandler = new JwtSecurityTokenHandler();
-      var key = Encoding.ASCII.GetBytes(_configuration["JwtSettings:Secret"]!);
+      var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:Secret"]!);
 
       var tokenDescriptor = new SecurityTokenDescriptor
       {
