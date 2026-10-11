@@ -101,6 +101,96 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("products", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AltText")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "SortOrder");
+
+                    b.ToTable("product_images", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("product_options", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductOptionValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ImageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OptionId", "Value")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "ImageId");
+
+                    b.ToTable("product_option_values", (string)null);
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -126,12 +216,33 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
-
                     b.HasIndex("Sku")
                         .IsUnique();
 
                     b.ToTable("product_variants", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariantOptionValue", b =>
+                {
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OptionValueId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("VariantId", "OptionId");
+
+                    b.HasIndex("ProductId", "VariantId");
+
+                    b.HasIndex("ProductId", "OptionId", "OptionValueId");
+
+                    b.ToTable("product_variant_option_values", (string)null);
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
@@ -253,6 +364,38 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("user_otps", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Infrastructure.Data.Entities.StorageDeletionJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("NextAttemptAt", "CreatedAt");
+
+                    b.ToTable("storage_deletion_jobs", (string)null);
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.Category", "Category")
@@ -272,6 +415,48 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Navigation("Store");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductImage", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.Product", "Product")
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductOption", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.Product", "Product")
+                        .WithMany("Options")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductOptionValue", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.ProductImage", "Image")
+                        .WithMany()
+                        .HasForeignKey("ProductId", "ImageId")
+                        .HasPrincipalKey("ProductId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NAVYCommerce.Domain.Entities.ProductOption", "Option")
+                        .WithMany("Values")
+                        .HasForeignKey("ProductId", "OptionId")
+                        .HasPrincipalKey("ProductId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Image");
+
+                    b.Navigation("Option");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariant", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.Product", "Product")
@@ -281,6 +466,27 @@ namespace NAVYCommerce.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariantOptionValue", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.ProductVariant", "Variant")
+                        .WithMany("OptionValues")
+                        .HasForeignKey("ProductId", "VariantId")
+                        .HasPrincipalKey("ProductId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NAVYCommerce.Domain.Entities.ProductOptionValue", "OptionValue")
+                        .WithMany()
+                        .HasForeignKey("ProductId", "OptionId", "OptionValueId")
+                        .HasPrincipalKey("ProductId", "OptionId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("OptionValue");
+
+                    b.Navigation("Variant");
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
@@ -312,7 +518,21 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("Images");
+
+                    b.Navigation("Options");
+
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductOption", b =>
+                {
+                    b.Navigation("Values");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ProductVariant", b =>
+                {
+                    b.Navigation("OptionValues");
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
