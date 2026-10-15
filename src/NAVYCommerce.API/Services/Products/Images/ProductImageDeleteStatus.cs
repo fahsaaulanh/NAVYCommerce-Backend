@@ -5,5 +5,6 @@ public enum ProductImageDeleteStatus
   Deleted,
   ProductNotFound,
   ImageNotFound,
-  ImageInUse
+  ImageInUse,
+  LastImageOfActiveProduct
 }

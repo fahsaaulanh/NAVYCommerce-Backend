@@ -492,6 +492,13 @@ namespace NAVYCommerce.API.Controllers
                   "Gambar masih digunakan oleh nilai opsi. Lepaskan atau ganti hubungan gambar terlebih dahulu."
           }),
 
+          ProductImageDeleteStatus.LastImageOfActiveProduct => Conflict(new
+          {
+            code = "PRODUCT_LAST_IMAGE_REQUIRED",
+            message =
+        "Foto terakhir produk aktif tidak dapat dihapus. Tambahkan foto pengganti atau nonaktifkan produk terlebih dahulu."
+          }),
+
           _ => throw new InvalidOperationException(
               "Status penghapusan gambar tidak dikenali.")
         };

@@ -12,8 +12,6 @@ using NAVYCommerce.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddScoped<IVariantGeneratorService, VariantGeneratorService>();
-
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);

@@ -41,9 +41,11 @@ namespace NAVYCommerce.API.Services
             CancellationToken cancellationToken = default);
 
         Task<ProductListResponse> GetPublicProductsAsync(
-            int page,
-            int pageSize,
+            ProductCatalogQueryRequest request,
             CancellationToken cancellationToken = default);
+
+        Task<System.Collections.Generic.IReadOnlyList<CatalogCategoryResponse>>
+            GetCatalogCategoriesAsync(CancellationToken cancellationToken = default);
 
         Task<UpdateProductVariantResult> UpdateVariantAsync(
             Guid ownerId,
@@ -58,5 +60,54 @@ namespace NAVYCommerce.API.Services
             int page,
             int pageSize,
             CancellationToken cancellationToken = default);
+
+        Task<SetProductPublicationResult> SetPublicationAsync(
+            Guid ownerId,
+            Guid productId,
+            bool isActive,
+            CancellationToken cancellationToken = default);
+
+        Task<RenameProductLabelResult> RenameOptionAsync(
+            Guid ownerId,
+            Guid productId,
+            Guid optionId,
+            string name,
+            CancellationToken cancellationToken = default);
+
+        Task<RenameProductLabelResult> RenameOptionValueAsync(
+            Guid ownerId,
+            Guid productId,
+            Guid optionValueId,
+            string value,
+            CancellationToken cancellationToken = default);
+
+        Task<PublicProductDetailResponse?> GetPublicProductAsync(
+            Guid productId,
+            CancellationToken cancellationToken = default);
     }
+
+    public enum SetProductPublicationStatus
+    {
+        Updated,
+        NotFound,
+        NotReady
+    }
+
+    public sealed record SetProductPublicationResult(
+        SetProductPublicationStatus Status,
+        ProductPublicationResponse? Product = null,
+        System.Collections.Generic.IReadOnlyList<ProductPublicationIssue>?
+            Issues = null);
+
+    public enum RenameProductLabelStatus
+    {
+        Updated,
+        NotFound,
+        Duplicate,
+        InvalidLabel
+    }
+
+    public sealed record RenameProductLabelResult(
+        RenameProductLabelStatus Status,
+        string? Label = null);
 }

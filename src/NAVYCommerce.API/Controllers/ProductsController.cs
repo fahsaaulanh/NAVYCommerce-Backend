@@ -22,17 +22,25 @@ namespace NAVYCommerce.API.Controllers
     }
 
     [HttpGet]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> GetProducts(
-        [FromQuery, Range(1, 1_000_000)] int page = 1,
-        [FromQuery, Range(1, 100)] int pageSize = 20,
+        [FromQuery] ProductCatalogQueryRequest request,
         CancellationToken cancellationToken = default)
     {
-      var result = await _productService.GetPublicProductsAsync(
-          page,
-          pageSize,
-          cancellationToken);
-
+      Response.Headers["Cache-Control"] = "no-store";
+      var result = await _productService.GetPublicProductsAsync(request, cancellationToken);
       return Ok(result);
+    }
+
+    [HttpGet("categories")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCatalogCategories(CancellationToken cancellationToken)
+    {
+      Response.Headers["Cache-Control"] = "no-store";
+      return Ok(await _productService.GetCatalogCategoriesAsync(cancellationToken));
     }
 
     [HttpPost]
@@ -212,6 +220,211 @@ namespace NAVYCommerce.API.Controllers
       }
 
       return Ok(result);
+    }
+
+    [HttpPut("{productId:guid}/publication")]
+    [Authorize(Roles = "Seller")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SetPublication(
+    Guid productId,
+    [FromBody] SetProductPublicationRequest request,
+    CancellationToken cancellationToken)
+    {
+      Response.Headers["Cache-Control"] = "no-store";
+
+      if (!TryGetUserId(out var userId))
+      {
+        return InvalidIdentity();
+      }
+
+      var result = await _productService.SetPublicationAsync(
+          userId,
+          productId,
+          request.IsActive!.Value,
+          cancellationToken);
+
+      switch (result.Status)
+      {
+        case SetProductPublicationStatus.Updated:
+          return Ok(new
+          {
+            code = result.Product!.IsActive
+                  ? "PRODUCT_PUBLISHED"
+                  : "PRODUCT_UNPUBLISHED",
+
+            message = result.Product.IsActive
+                  ? "Produk aktif dan tersedia di katalog."
+                  : "Produk nonaktif dan tidak tampil di katalog.",
+
+            data = result.Product
+          });
+
+        case SetProductPublicationStatus.NotFound:
+          return NotFound(new
+          {
+            code = "PRODUCT_NOT_FOUND",
+            message = "Produk tidak ditemukan."
+          });
+
+        case SetProductPublicationStatus.NotReady:
+          return Conflict(new
+          {
+            code = "PRODUCT_NOT_READY",
+            message = "Lengkapi produk sebelum publikasi.",
+            issues = result.Issues
+          });
+
+        default:
+          throw new InvalidOperationException(
+              "Status publikasi produk tidak dikenali.");
+      }
+    }
+
+    [HttpPut("{productId:guid}/options/{optionId:guid}/name")]
+    [Authorize(Roles = "Seller")]
+    public async Task<IActionResult> RenameOption(
+      Guid productId,
+      Guid optionId,
+      [FromBody] RenameProductOptionRequest request,
+      CancellationToken cancellationToken)
+    {
+      Response.Headers["Cache-Control"] = "no-store";
+
+      if (!TryGetUserId(out var userId))
+      {
+        return InvalidIdentity();
+      }
+
+      var result = await _productService.RenameOptionAsync(
+          userId,
+          productId,
+          optionId,
+          request.Name,
+          cancellationToken);
+
+      return result.Status switch
+      {
+        RenameProductLabelStatus.Updated => Ok(new
+        {
+          code = "PRODUCT_OPTION_RENAMED",
+          message = "Nama opsi berhasil diperbarui.",
+          data = new
+          {
+            id = optionId,
+            name = result.Label
+          }
+        }),
+
+        RenameProductLabelStatus.NotFound => NotFound(new
+        {
+          code = "PRODUCT_OPTION_NOT_FOUND",
+          message = "Opsi tidak ditemukan pada produk yang dapat diakses."
+        }),
+
+        RenameProductLabelStatus.Duplicate => Conflict(new
+        {
+          code = "PRODUCT_OPTION_NAME_ALREADY_USED",
+          message = "Nama opsi sudah digunakan pada produk ini."
+        }),
+
+        RenameProductLabelStatus.InvalidLabel => BadRequest(new
+        {
+          code = "PRODUCT_OPTION_NAME_INVALID",
+          message = "Nama opsi wajib diisi dan maksimal 50 karakter."
+        }),
+
+        _ => throw new InvalidOperationException(
+            "Status perubahan nama opsi tidak dikenali.")
+      };
+    }
+
+    [HttpPut("{productId:guid}/option-values/{optionValueId:guid}/value")]
+    [Authorize(Roles = "Seller")]
+    public async Task<IActionResult> RenameOptionValue(
+    Guid productId,
+    Guid optionValueId,
+    [FromBody] RenameProductOptionValueRequest request,
+    CancellationToken cancellationToken)
+    {
+      Response.Headers["Cache-Control"] = "no-store";
+
+      if (!TryGetUserId(out var userId))
+      {
+        return InvalidIdentity();
+      }
+
+      var result = await _productService.RenameOptionValueAsync(
+          userId,
+          productId,
+          optionValueId,
+          request.Value,
+          cancellationToken);
+
+      return result.Status switch
+      {
+        RenameProductLabelStatus.Updated => Ok(new
+        {
+          code = "PRODUCT_OPTION_VALUE_RENAMED",
+          message = "Nilai pilihan berhasil diperbarui.",
+          data = new
+          {
+            id = optionValueId,
+            value = result.Label
+          }
+        }),
+
+        RenameProductLabelStatus.NotFound => NotFound(new
+        {
+          code = "PRODUCT_OPTION_VALUE_NOT_FOUND",
+          message = "Nilai pilihan tidak ditemukan pada produk yang dapat diakses."
+        }),
+
+        RenameProductLabelStatus.Duplicate => Conflict(new
+        {
+          code = "PRODUCT_OPTION_VALUE_ALREADY_USED",
+          message = "Nilai pilihan sudah digunakan dalam opsi ini."
+        }),
+
+        RenameProductLabelStatus.InvalidLabel => BadRequest(new
+        {
+          code = "PRODUCT_OPTION_VALUE_INVALID",
+          message = "Nilai pilihan wajib diisi dan maksimal 50 karakter."
+        }),
+
+        _ => throw new InvalidOperationException(
+            "Status perubahan nilai pilihan tidak dikenali.")
+      };
+    }
+
+    [HttpGet("{productId:guid}")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPublicProduct(
+      Guid productId,
+      CancellationToken cancellationToken)
+    {
+      Response.Headers["Cache-Control"] = "no-store";
+
+      var result = await _productService.GetPublicProductAsync(
+          productId,
+          cancellationToken);
+
+      if (result == null)
+      {
+        return NotFound(new
+        {
+          code = "PRODUCT_NOT_FOUND",
+          message = "Produk tidak ditemukan atau belum tersedia."
+        });
+      }
+
+      return Ok(new { data = result });
     }
 
     private bool TryGetUserId(out Guid userId)

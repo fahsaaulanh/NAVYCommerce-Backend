@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using NAVYCommerce.Domain.Entities;
+using System.Text.RegularExpressions;
 
 namespace NAVYCommerce.API.Contracts.Auth
 {
@@ -14,8 +15,8 @@ namespace NAVYCommerce.API.Contracts.Auth
         [Required(ErrorMessage = "Password wajib diisi.")]
         [StringLength(
             72,
-            MinimumLength = 15,
-            ErrorMessage = "Password harus terdiri dari 15–72 karakter.")]
+            MinimumLength = 10,
+            ErrorMessage = "Password harus terdiri dari 10–72 karakter.")]
         public string Password { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Nama lengkap wajib diisi.")]
@@ -46,6 +47,25 @@ namespace NAVYCommerce.API.Contracts.Auth
                 yield return new ValidationResult(
                     "Registrasi hanya tersedia untuk Customer atau Seller.",
                     new[] { nameof(Role) });
+            }
+
+            if (!string.IsNullOrEmpty(Password))
+            {
+                if (!Regex.IsMatch(Password, "[A-Z]"))
+                {
+                    yield return new ValidationResult(
+                        "Password harus mengandung minimal satu huruf kapital A–Z.",
+                        new[] { nameof(Password) });
+                }
+
+                if (!Regex.IsMatch(
+                    Password,
+                    @"[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]"))
+                {
+                    yield return new ValidationResult(
+                        "Password harus mengandung minimal satu simbol, misalnya !, @, atau #.",
+                        new[] { nameof(Password) });
+                }
             }
 
             if (!string.IsNullOrEmpty(Password) &&
