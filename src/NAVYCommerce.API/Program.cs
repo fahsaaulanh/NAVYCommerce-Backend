@@ -10,6 +10,7 @@ using NAVYCommerce.Application.Abstractions.Imaging;
 using NAVYCommerce.Infrastructure.Imaging;
 using NAVYCommerce.API.BackgroundServices;
 using NAVYCommerce.API.Services.Carts;
+using NAVYCommerce.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddRegionServices(builder.Configuration);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

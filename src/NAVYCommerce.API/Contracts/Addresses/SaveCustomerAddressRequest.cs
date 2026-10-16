@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NAVYCommerce.API.Contracts.Regions;
 
 namespace NAVYCommerce.API.Contracts.Addresses
 {
@@ -26,8 +27,8 @@ namespace NAVYCommerce.API.Contracts.Addresses
         20,
         ErrorMessage = "Kode wilayah maksimal 20 karakter.")]
     [RegularExpression(
-        @"^[0-9]{2}\.[0-9]{2}\.[0-9]{2}\.[0-9]{4}$",
-        ErrorMessage = "Format kode kelurahan atau desa tidak valid.")]
+      RegionCodePatterns.Village,
+      ErrorMessage = "Format kode kelurahan atau desa tidak valid.")]
     public string VillageCode { get; init; } = string.Empty;
 
     [Required(ErrorMessage = "Kode pos wajib diisi.")]
