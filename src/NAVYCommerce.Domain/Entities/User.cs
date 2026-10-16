@@ -17,6 +17,8 @@ namespace NAVYCommerce.Domain.Entities
     public ICollection<UserOtp> Otps { get; set; } = new List<UserOtp>();
     public ICollection<Store> Stores { get; set; } = new List<Store>();
     public Cart? Cart { get; set; }
+    public ICollection<CustomerAddress> Addresses { get; set; }
+    = new List<CustomerAddress>();
   }
 
   public enum UserRole

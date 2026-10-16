@@ -109,6 +109,105 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.CustomerAddress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressLine")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CityCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeliveryNotes")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DistrictCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Province")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProvinceCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Village")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("VillageCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "CustomerId" }, "IX_customer_addresses_CustomerId");
+
+                    b.HasIndex(new[] { "CustomerId" }, "IX_customer_addresses_OneDefaultPerCustomer")
+                        .IsUnique()
+                        .HasFilter("\"IsDefault\" = TRUE");
+
+                    b.ToTable("customer_addresses", (string)null);
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -485,6 +584,17 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Navigation("ProductVariant");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.CustomerAddress", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.User", "Customer")
+                        .WithMany("Addresses")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.Category", "Category")
@@ -636,6 +746,8 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Addresses");
+
                     b.Navigation("Cart");
 
                     b.Navigation("Otps");

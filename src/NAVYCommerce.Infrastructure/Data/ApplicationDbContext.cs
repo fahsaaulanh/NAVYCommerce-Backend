@@ -38,6 +38,9 @@ namespace NAVYCommerce.Infrastructure.Data
     public DbSet<StorageDeletionJob> StorageDeletionJobs
     => Set<StorageDeletionJob>();
 
+    public DbSet<CustomerAddress> CustomerAddresses
+    => Set<CustomerAddress>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
@@ -52,6 +55,8 @@ namespace NAVYCommerce.Infrastructure.Data
       modelBuilder.ApplyConfiguration(new ProductOptionValueConfiguration());
       modelBuilder.ApplyConfiguration(
           new ProductVariantOptionValueConfiguration());
+      modelBuilder.ApplyConfiguration(
+          new CustomerAddressConfiguration());
 
       modelBuilder.Entity<User>(entity =>
       {
