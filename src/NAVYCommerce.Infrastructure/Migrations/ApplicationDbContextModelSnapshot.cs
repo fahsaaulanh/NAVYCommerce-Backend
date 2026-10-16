@@ -23,6 +23,65 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Cart", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_carts_CustomerId");
+
+                    b.ToTable("carts", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.CartItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProductVariantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("CartId", "ProductVariantId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_cart_items_CartId_ProductVariantId");
+
+                    b.ToTable("cart_items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_cart_items_Quantity_Positive", "\"Quantity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -396,6 +455,36 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("storage_deletion_jobs", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Cart", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.User", "Customer")
+                        .WithOne("Cart")
+                        .HasForeignKey("NAVYCommerce.Domain.Entities.Cart", "CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.CartItem", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.Cart", "Cart")
+                        .WithMany("Items")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NAVYCommerce.Domain.Entities.ProductVariant", "ProductVariant")
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
+
+                    b.Navigation("ProductVariant");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Product", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.Category", "Category")
@@ -511,6 +600,11 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.Cart", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Products");
@@ -542,6 +636,8 @@ namespace NAVYCommerce.Infrastructure.Migrations
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Cart");
+
                     b.Navigation("Otps");
 
                     b.Navigation("Stores");

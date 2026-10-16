@@ -9,6 +9,7 @@ using NAVYCommerce.Infrastructure.Storage;
 using NAVYCommerce.Application.Abstractions.Imaging;
 using NAVYCommerce.Infrastructure.Imaging;
 using NAVYCommerce.API.BackgroundServices;
+using NAVYCommerce.API.Services.Carts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +80,8 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddScoped<
     IRegistrationOtpService,
     RegistrationOtpService>();
+
+builder.Services.AddScoped<ICartService, CartService>();
 
 builder.Services.AddCors(options =>
 {

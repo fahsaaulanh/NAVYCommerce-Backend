@@ -16,6 +16,7 @@ namespace NAVYCommerce.Domain.Entities
     public DateTime LastUpdatedAt { get; set; }
     public ICollection<UserOtp> Otps { get; set; } = new List<UserOtp>();
     public ICollection<Store> Stores { get; set; } = new List<Store>();
+    public Cart? Cart { get; set; }
   }
 
   public enum UserRole

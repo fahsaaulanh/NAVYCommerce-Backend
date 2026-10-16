@@ -14,6 +14,8 @@ namespace NAVYCommerce.Infrastructure.Data
 
     public DbSet<User> Users => Set<User>();
     public DbSet<UserOtp> UserOtps => Set<UserOtp>();
+    public DbSet<Cart> Carts => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Store> Stores => Set<Store>();
 
@@ -40,6 +42,8 @@ namespace NAVYCommerce.Infrastructure.Data
     {
       base.OnModelCreating(modelBuilder);
 
+      modelBuilder.ApplyConfiguration(new CartConfiguration());
+      modelBuilder.ApplyConfiguration(new CartItemConfiguration());
       modelBuilder.ApplyConfiguration(
           new StorageDeletionJobConfiguration());
       modelBuilder.ApplyConfiguration(new StoreConfiguration());
