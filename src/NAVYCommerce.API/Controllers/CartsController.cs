@@ -45,6 +45,16 @@ namespace NAVYCommerce.API.Controllers
           : Ok(new { data = cart });
     }
 
+    [HttpGet("summary")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSummary(CancellationToken cancellationToken)
+    {
+      if (!User.TryGetUserId(out var customerId)) return InvalidIdentity();
+
+      var summary = await _cartService.GetSummaryAsync(customerId, cancellationToken);
+      return summary == null ? InvalidIdentity() : Ok(new { data = summary });
+    }
+
     [HttpPost("items")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -29,14 +29,7 @@ namespace NAVYCommerce.API.Services.Carts
             Guid customerId,
             CancellationToken cancellationToken = default)
         {
-            var customerExists = customerId != Guid.Empty &&
-                await _context.Users.AnyAsync(
-                    user => user.Id == customerId &&
-                        user.Role == UserRole.Customer &&
-                        user.IsVerified,
-                    cancellationToken);
-
-            if (!customerExists)
+            if (!await IsCustomerAsync(customerId, cancellationToken))
             {
                 return null;
             }

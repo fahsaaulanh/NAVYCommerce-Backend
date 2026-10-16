@@ -312,7 +312,7 @@ namespace NAVYCommerce.API.Services
         CancellationToken cancellationToken = default)
     {
       ArgumentNullException.ThrowIfNull(request);
-      // Also guard service calls that do not pass through MVC validation.
+
       Validator.ValidateObject(request, new ValidationContext(request), validateAllProperties: true);
 
       var query = PublicProductsQuery();
@@ -381,7 +381,7 @@ namespace NAVYCommerce.API.Services
                   .FirstOrDefault()
           });
 
-      // Filter the same lowest variant price shown on the catalog card.
+
       if (request.MinPrice.HasValue)
       {
         summaries = summaries.Where(item => item.MinPrice >= request.MinPrice.Value);

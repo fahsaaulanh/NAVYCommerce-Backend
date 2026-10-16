@@ -188,8 +188,6 @@ namespace NAVYCommerce.API.Services.Carts
       await using var transaction =
           await _context.Database.BeginTransactionAsync(cancellationToken);
 
-      // Semua perubahan keranjang mengambil lock yang sama, termasuk
-      // ketika baris cart belum dibuat. Lock dilepas saat transaksi berakhir.
       var customers = await _context.Users
           .FromSqlInterpolated(
               $"SELECT * FROM users WHERE \"Id\" = {customerId} FOR UPDATE")
