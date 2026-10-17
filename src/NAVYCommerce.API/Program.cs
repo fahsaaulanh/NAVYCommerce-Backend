@@ -11,6 +11,7 @@ using NAVYCommerce.Infrastructure.Imaging;
 using NAVYCommerce.API.BackgroundServices;
 using NAVYCommerce.API.Services.Carts;
 using NAVYCommerce.API.Extensions;
+using NAVYCommerce.API.Services.Addresses;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +80,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+builder.Services.AddScoped<
+    ICustomerAddressService,
+    CustomerAddressService>();
 
 builder.Services.AddScoped<
     IRegistrationOtpService,
