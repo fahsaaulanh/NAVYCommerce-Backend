@@ -12,6 +12,8 @@ namespace NAVYCommerce.Domain.Entities
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public StoreShippingOrigin? ShippingOrigin { get; set; }
+
     public User Owner { get; set; } = null!;
     public ICollection<Product> Products { get; set; } = new List<Product>();
   }

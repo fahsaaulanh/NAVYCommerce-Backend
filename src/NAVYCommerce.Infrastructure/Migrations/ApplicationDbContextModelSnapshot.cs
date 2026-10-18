@@ -403,6 +403,32 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.ToTable("product_variant_option_values", (string)null);
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.ShippingLocationMapping", b =>
+                {
+                    b.Property<string>("Provider")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("RegionFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DestinationId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DestinationLabel")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Provider", "RegionFingerprint");
+
+                    b.ToTable("shipping_location_mappings", (string)null);
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
                 {
                     b.Property<Guid>("Id")
@@ -437,6 +463,86 @@ namespace NAVYCommerce.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("stores", (string)null);
+                });
+
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.StoreShippingOrigin", b =>
+                {
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddressLine")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CityCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ContactName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DistrictCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PickupNotes")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<string>("Province")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProvinceCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Village")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("VillageCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("StoreId");
+
+                    b.ToTable("store_shipping_origins", (string)null);
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>
@@ -699,6 +805,17 @@ namespace NAVYCommerce.Infrastructure.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("NAVYCommerce.Domain.Entities.StoreShippingOrigin", b =>
+                {
+                    b.HasOne("NAVYCommerce.Domain.Entities.Store", "Store")
+                        .WithOne("ShippingOrigin")
+                        .HasForeignKey("NAVYCommerce.Domain.Entities.StoreShippingOrigin", "StoreId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Store");
+                });
+
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.UserOtp", b =>
                 {
                     b.HasOne("NAVYCommerce.Domain.Entities.User", "User")
@@ -742,6 +859,8 @@ namespace NAVYCommerce.Infrastructure.Migrations
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.Store", b =>
                 {
                     b.Navigation("Products");
+
+                    b.Navigation("ShippingOrigin");
                 });
 
             modelBuilder.Entity("NAVYCommerce.Domain.Entities.User", b =>

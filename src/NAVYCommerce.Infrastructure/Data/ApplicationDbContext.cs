@@ -41,6 +41,10 @@ namespace NAVYCommerce.Infrastructure.Data
     public DbSet<CustomerAddress> CustomerAddresses
     => Set<CustomerAddress>();
 
+    public DbSet<StoreShippingOrigin> StoreShippingOrigins
+    => Set<StoreShippingOrigin>();
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
       base.OnModelCreating(modelBuilder);
@@ -57,6 +61,12 @@ namespace NAVYCommerce.Infrastructure.Data
           new ProductVariantOptionValueConfiguration());
       modelBuilder.ApplyConfiguration(
           new CustomerAddressConfiguration());
+
+      modelBuilder.ApplyConfiguration(new StoreShippingOriginConfiguration());
+
+      modelBuilder.ApplyConfiguration(
+        new ShippingLocationMappingConfiguration());
+
 
       modelBuilder.Entity<User>(entity =>
       {
