@@ -16,4 +16,8 @@ public interface IShippingLocationService
 
     Task<int> ConfirmAsync(ShippingRegion region, int destinationId,
         int searchOffset = 0, CancellationToken cancellationToken = default);
+
+    Task<ShippingLocationResolution> ResolveAsync(
+        ShippingRegion region,
+        CancellationToken cancellationToken = default);
 }

@@ -73,11 +73,12 @@ public sealed class CheckoutShippingService : ICheckoutShippingService
         if (groups.Length > MaxStores)
             return new(CheckoutShippingStatus.TooManyStores);
 
-        // Mapping harus sudah dikonfirmasi. Endpoint checkout tidak menerima ID provider mentah.
-        var destinationId = await _locations.FindConfirmedIdAsync(
+        // Tidak menerima ID provider dari browser: backend menyelesaikan mapping sendiri.
+        var destination = await _locations.ResolveAsync(
             ShippingRegion.FromCustomerAddress(address), cancellationToken);
-        if (!destinationId.HasValue)
-            return new(CheckoutShippingStatus.DestinationNotMapped);
+        if (!destination.IsResolved)
+            return new(CheckoutShippingStatus.DestinationNotMapped, LocationFailure: destination);
+        var destinationId = destination.DestinationId!.Value;
 
         var storeIds = groups.Select(group => group.Key).ToArray();
         var origins = await _db.Set<StoreShippingOrigin>().AsNoTracking()
@@ -122,19 +123,21 @@ public sealed class CheckoutShippingService : ICheckoutShippingService
                 packages.Add(Package("ORIGIN_MISSING", "Alamat asal pengiriman toko belum diatur."));
                 continue;
             }
-            var originId = await _locations.FindConfirmedIdAsync(
+            var originLocation = await _locations.ResolveAsync(
                 ShippingRegion.FromStoreOrigin(origin), cancellationToken);
-            if (!originId.HasValue)
+            if (!originLocation.IsResolved)
             {
-                packages.Add(Package("ORIGIN_UNMAPPED", "Lokasi pengiriman toko belum terkonfirmasi."));
+                packages.Add(Package("ORIGIN_" + originLocation.Code,
+                    "Alamat asal toko: " + originLocation.Message));
                 continue;
             }
+            var originId = originLocation.DestinationId!.Value;
 
             try
             {
                 // Berurutan: membatasi lonjakan request provider dan penggunaan DbContext.
-                var rates = await _client.GetRatesAsync(originId.Value,
-                    destinationId.Value, grams, cancellationToken);
+                var rates = await _client.GetRatesAsync(originId,
+                    destinationId, grams, cancellationToken);
                 packages.Add(new(store.Id, store.Name, ids, grams, subtotal,
                     rates.Count > 0 ? "READY" : "NO_SERVICES",
                     rates.Count > 0 ? null : "Belum ada layanan pengiriman untuk paket ini.",

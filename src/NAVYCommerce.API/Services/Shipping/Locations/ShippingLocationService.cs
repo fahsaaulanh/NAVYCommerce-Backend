@@ -9,16 +9,21 @@ using Npgsql;
 
 namespace NAVYCommerce.API.Services.Shipping.Locations;
 
-public sealed class ShippingLocationService : IShippingLocationService
+public sealed partial class ShippingLocationService : IShippingLocationService
 {
     private const string Provider = "rajaongkir";
     private readonly ApplicationDbContext _db;
     private readonly IRajaOngkirClient _client;
+    private readonly ShippingLocationResolutionCoordinator _coordinator;
+    private readonly ILogger<ShippingLocationService> _logger;
 
-    public ShippingLocationService(ApplicationDbContext db, IRajaOngkirClient client)
+    public ShippingLocationService(ApplicationDbContext db, IRajaOngkirClient client,
+        ShippingLocationResolutionCoordinator coordinator, ILogger<ShippingLocationService> logger)
     {
         _db = db;
         _client = client;
+        _coordinator = coordinator;
+        _logger = logger;
     }
 
     public async Task<int?> FindConfirmedIdAsync(ShippingRegion region,
@@ -32,10 +37,10 @@ public sealed class ShippingLocationService : IShippingLocationService
     }
 
     public async Task<IReadOnlyList<ShippingLocationCandidate>> FindCandidatesAsync(
-        ShippingRegion region, int offset = 0,
-        CancellationToken cancellationToken = default)
+        ShippingRegion region, int offset = 0, CancellationToken cancellationToken = default)
     {
         Validate(region);
+        if (offset is < 0 or > 10000) throw new ArgumentOutOfRangeException(nameof(offset));
         var destinations = await _client.SearchDestinationsAsync(
             region.PostalCode.Trim(), 50, offset, cancellationToken);
         return Array.AsReadOnly(destinations.Select(x =>
@@ -46,41 +51,49 @@ public sealed class ShippingLocationService : IShippingLocationService
         int searchOffset = 0, CancellationToken cancellationToken = default)
     {
         var fingerprint = Fingerprint(region);
-        if (destinationId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(destinationId));
+        if (destinationId <= 0) throw new ArgumentOutOfRangeException(nameof(destinationId));
+        var gate = _coordinator.GetGate(fingerprint);
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            var existingId = await FindConfirmedIdAsync(region, cancellationToken);
+            if (existingId.HasValue) return RequireSameMapping(existingId.Value, destinationId);
 
-        var existingId = await FindConfirmedIdAsync(region, cancellationToken);
-        if (existingId.HasValue)
-            return RequireSameMapping(existingId.Value, destinationId);
 
-        var candidates = await FindCandidatesAsync(region, searchOffset, cancellationToken);
-        var selected = candidates.SingleOrDefault(x => x.Destination.Id == destinationId);
-        if (selected is null || !selected.MatchesAddress)
-            throw new InvalidOperationException(
-                "Lokasi RajaOngkir belum cocok dengan seluruh wilayah dan kode pos alamat.");
+            var candidates = await FindCandidatesAsync(region, searchOffset, cancellationToken);
+            var selected = candidates.SingleOrDefault(x => x.Destination.Id == destinationId);
+            if (selected is null || !selected.MatchesAddress)
+                throw new InvalidOperationException(
+                    "Lokasi RajaOngkir belum cocok dengan seluruh wilayah dan kode pos alamat.");
 
+            var id = await PersistMappingAsync(fingerprint, destinationId,
+                selected.Destination.Label, cancellationToken);
+            _coordinator.Forget(AutomaticCacheKey(fingerprint));
+            return id;
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task<int> PersistMappingAsync(string fingerprint, int destinationId,
+        string label, CancellationToken cancellationToken)
+    {
         var mapping = new ShippingLocationMapping
         {
             Provider = Provider,
             RegionFingerprint = fingerprint,
             DestinationId = destinationId,
-            DestinationLabel = selected.Destination.Label,
+            DestinationLabel = label,
             ConfirmedAt = DateTime.UtcNow
         };
         _db.Set<ShippingLocationMapping>().Add(mapping);
-        try
-        {
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException ex) when (
-            ex.InnerException is PostgresException
-            {
-                SqlState: PostgresErrorCodes.UniqueViolation,
-                TableName: "shipping_location_mappings"
-            })
+        try { await _db.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+        { SqlState: PostgresErrorCodes.UniqueViolation, TableName: "shipping_location_mappings" })
         {
             _db.Entry(mapping).State = EntityState.Detached;
-            var savedId = await FindConfirmedIdAsync(region, cancellationToken);
+            var savedId = await _db.Set<ShippingLocationMapping>().AsNoTracking()
+                .Where(x => x.Provider == Provider && x.RegionFingerprint == fingerprint)
+                .Select(x => (int?)x.DestinationId).SingleOrDefaultAsync(cancellationToken);
             if (!savedId.HasValue) throw;
             return RequireSameMapping(savedId.Value, destinationId);
         }
@@ -89,66 +102,50 @@ public sealed class ShippingLocationService : IShippingLocationService
 
     private static int RequireSameMapping(int existingId, int requestedId)
     {
-        if (existingId != requestedId)
-            throw new InvalidOperationException(
-                "Wilayah ini sudah memiliki mapping berbeda. Perlu koreksi mapping secara eksplisit.");
+        if (existingId != requestedId) throw new MappingConflictException();
         return existingId;
     }
 
-    private static bool Matches(
-        ShippingRegion region,
-        ShippingDestination destination) =>
-        Normalize(region.Province) == Normalize(destination.Province)
-        && CityMatches(region.City, destination.City)
-        && Normalize(region.District) == Normalize(destination.District)
-        && Normalize(region.Village) == Normalize(destination.Village)
-        && Normalize(region.PostalCode) == Normalize(destination.PostalCode);
+    private sealed class MappingConflictException : InvalidOperationException
+    {
+        public MappingConflictException() : base(
+            "Wilayah ini sudah memiliki mapping berbeda. Perlu koreksi mapping secara eksplisit.")
+        { }
+    }
+
+    private static bool Matches(ShippingRegion region, ShippingDestination destination)
+    {
+        if (destination is null || destination.Id <= 0) return false;
+        var fields = new[] { destination.Province, destination.City, destination.District,
+            destination.Village, destination.PostalCode };
+        if (fields.Any(value => string.IsNullOrWhiteSpace(value) || value.Length > 200)) return false;
+        return Normalize(region.Province) == Normalize(destination.Province)
+            && CityMatches(region.City, destination.City)
+            && Normalize(region.District) == Normalize(destination.District)
+            && Normalize(region.Village) == Normalize(destination.Village)
+            && Normalize(region.PostalCode) == Normalize(destination.PostalCode);
+    }
 
     private static bool CityMatches(string first, string second)
     {
         var left = ParseCity(first);
         var right = ParseCity(second);
-
-        if (left.Name != right.Name)
-        {
-            return false;
-        }
-
-        if (left.Kind is not null && right.Kind is not null)
-        {
-            return left.Kind == right.Kind;
-        }
-
-        return true;
+        return left.Name == right.Name &&
+            (left.Kind is null || right.Kind is null || left.Kind == right.Kind);
     }
 
     private static (string Name, string? Kind) ParseCity(string value)
     {
         var normalized = Normalize(value);
-
         const string regencyPrefix = "KABUPATEN ";
         const string cityPrefix = "KOTA ";
-
-        if (normalized.StartsWith(
-            regencyPrefix,
-            StringComparison.Ordinal))
-        {
-            return (
-                normalized[regencyPrefix.Length..],
-                "KABUPATEN");
-        }
-
-        if (normalized.StartsWith(
-            cityPrefix,
-            StringComparison.Ordinal))
-        {
-            return (
-                normalized[cityPrefix.Length..],
-                "KOTA");
-        }
-
+        if (normalized.StartsWith(regencyPrefix, StringComparison.Ordinal))
+            return (normalized[regencyPrefix.Length..], "KABUPATEN");
+        if (normalized.StartsWith(cityPrefix, StringComparison.Ordinal))
+            return (normalized[cityPrefix.Length..], "KOTA");
         return (normalized, null);
     }
+
     private static string Fingerprint(ShippingRegion region)
     {
         Validate(region);
@@ -174,8 +171,8 @@ public sealed class ShippingLocationService : IShippingLocationService
             region.District, region.Village, region.PostalCode };
         if (fields.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 200))
             throw new ArgumentException("Data wilayah alamat belum lengkap atau terlalu panjang.", nameof(region));
-        if (region.PostalCode.Trim().Length != 5
-            || region.PostalCode.Trim().Any(c => c < '0' || c > '9'))
+        if (region.PostalCode.Trim().Length != 5 ||
+            region.PostalCode.Trim().Any(c => c < '0' || c > '9'))
             throw new ArgumentException("Kode pos harus terdiri dari 5 digit.", nameof(region));
     }
 }

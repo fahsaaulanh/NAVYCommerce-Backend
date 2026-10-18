@@ -14,10 +14,12 @@ public static class CommerceServiceCollectionExtensions
     public static IServiceCollection AddNavyCommerce(
         this IServiceCollection services, IConfiguration configuration)
     {
-
+        // Memanggil extension yang sudah ada, bukan membuat provider kedua.
         services.AddRegionServices(configuration);
         services.AddShippingServices(configuration);
 
+        // Tetap memakai registrasi lama bila extension shipping sudah menambahkannya.
+        services.TryAddSingleton<ShippingLocationResolutionCoordinator>();
         services.TryAddScoped<IShippingLocationService, ShippingLocationService>();
         services.AddScoped<IRegistrationOtpService, RegistrationOtpService>();
         services.AddScoped<ICustomerAddressService, CustomerAddressService>();
